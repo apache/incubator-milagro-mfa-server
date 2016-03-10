@@ -1,0 +1,6 @@
+[run]
+branch = True
+omit =
+    */tests/*
+    .tox/*
+    servers/*/config_default.py

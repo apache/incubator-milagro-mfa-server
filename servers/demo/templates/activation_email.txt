@@ -1,0 +1,7 @@
+Milagro MFA Platform.
+Your identity is now ready to activate:
+Click this activation link and follow the instructions:
+{{ validationURL }}
+
+Regards,
+The Milagro MFA Team

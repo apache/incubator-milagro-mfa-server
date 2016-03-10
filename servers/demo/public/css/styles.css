@@ -1,0 +1,478 @@
+body {
+    font-family: 'Open Sans', Arial, Helvetica, sans-serif;
+    color: #36424a;
+    font-size: 1em;
+    overflow-y: scroll;
+}
+
+a {
+    color: #4891dc;
+    text-decoration: underline;
+}
+
+a:hover {
+    color: #f68428;
+}
+
+span.support {
+    width: 33.33%;
+    color: #3F4A52;
+    padding: 0px;
+    margin: 0px;
+    float: left;
+    font-size: 0.88em;
+    text-decoration: none;
+    padding: 10px 0px
+}
+
+.nav ul li span.support a {
+    width: auto;
+    float: none;
+    padding-left: 5px;
+    font-size: 1em;
+}
+
+.nav ul li span.support a:hover {
+    background-color: #ffffff
+}
+
+input {
+    height: 24px;
+    width: 200px;
+    margin: 0px 10px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+#header {
+    padding: 10px 0px 10px;
+    border-bottom: 1px solid #CFCFCF;
+}
+
+.container {
+    max-width: 980px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.logo1 {
+    width: 49.9%;
+    float: left;
+}
+
+.logo1 img {
+    margin: 5px 0px 0px;
+}
+
+.logo2 {
+    width: 49.9%;
+    text-align: right;
+    float: left;
+}
+
+.clear {
+    clear: both;
+}
+
+.nav {
+    border-bottom: 1px solid #CFCFCF;
+    text-align: center;
+}
+
+.nav ul {
+    padding: 0px;
+    margin: 0px;
+    width: 100%
+}
+
+.nav ul li {
+    display: inline;
+}
+
+.nav ul li a {
+    width: 33.33%;
+    color: #4891dc;
+    padding: 0px;
+    margin: 0px;
+    float: left;
+    font-size: 0.88em;
+    text-decoration: none;
+    padding: 10px 0px
+}
+
+.nav ul li a:hover {
+    color: #f68428;
+    background-color: #edf0ee;
+}
+
+.nav ul li a.active {
+    color: #f68428;
+}
+
+.content h1 {
+    color: #4891dc;
+    text-align: center;
+    font-size: 2.5em;
+}
+
+.content h2 {
+    color: #363C74;
+    margin-top: 0px
+}
+
+.content p {}
+
+.column {
+    float: left;
+    padding: 20px;
+}
+
+.one {
+    width: 93.5%;
+    margin: 10px;
+}
+
+.two {
+    width: 43%;
+    margin: 10px;
+}
+
+.imageList {
+    margin-top: 0px;
+    padding-bottom: 0px;
+    padding-top: 0px;
+}
+
+.imageList li {
+    text-align: left
+}
+
+.center {
+    text-align: center
+}
+
+.leftAlign {
+    text-align: left;
+}
+
+.marBot10 {
+    margin-bottom: 10px;
+}
+
+.marBot20 {
+    margin-bottom: 20px;
+}
+
+.secret {
+    background-color: #FFFFFF;
+    color: grey;
+    font-size: 10px;
+    padding: 3px;
+    width: 80%;
+    word-wrap: break-word;
+}
+
+.grey {
+    background-color: ##edf0ee;
+}
+
+.dkRed {
+    color: #900;
+}
+
+.dkPurple {
+    color: #63C;
+}
+
+.dkBlue {
+    color: #039;
+}
+
+.dkGreen {
+    color: #063;
+}
+
+.error {
+    color: red;
+    font-weight: bold;
+}
+
+.grey p {
+    color: #767676;
+    font-size: 0.88em;
+}
+
+.grey p label {
+    color: #36424a;
+}
+
+section {
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+#footer {
+    text-align: center;
+    font-size: 0.6em;
+    color: #36424a;
+    border-top: 1px solid #CFCFCF;
+    padding-top: 10px;
+    margin-top: 15px;
+}
+
+.instruction {
+    border: 1px solid #767676;
+    float: left;
+    display: block;
+    background-color: white;
+    width: 230px;
+    margin: 60px 0px 0px 20px;
+    padding: 0px 15px 15px;
+}
+
+
+/*#Buttons */
+
+.button,
+button,
+input[type="submit"],
+input[type="reset"],
+input[type="button"] {
+    margin: 0 5px;
+    color: #fff;
+    background: #4891dc;
+    border: 0 none;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    border-radius: 3px;
+    color: #fff display: inline-block;
+    font-size: 11px;
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+    margin-bottom: 0px;
+    line-height: normal;
+    padding: 8px 10px;
+    font-family: "Open Sans", Helvetica, Arial, sans-serif;
+}
+
+.button:hover,
+button:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover,
+input[type="button"]:hover {
+    background: #f68428;
+    border: 0 none;
+}
+
+.button:active,
+button:active,
+input[type="submit"]:active,
+input[type="reset"]:active,
+input[type="button"]:active {
+    background: #f68428;
+    border: 0 none;
+}
+
+.button.full-width,
+button.full-width,
+input[type="submit"].full-width,
+input[type="reset"].full-width,
+input[type="button"].full-width {
+    width: 100%;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    text-align: center;
+}
+
+
+/* Fix for odd Mozilla border & padding issues */
+
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+    border: 0;
+    padding: 0;
+}
+
+.larger {
+    font-size: 1.5em;
+    padding: 15px 20px;
+    -moz-border-radius: 10px;
+    -webkit-border-radius: 10px;
+    border-radius: 10px;
+}
+
+
+/*css for hubspot js form */
+
+.content .page-header {
+    color: #2F2F2F;
+    float: none;
+    font-family: 'Open Sans', Tahoma, Geneva, sans-serif;
+    font-size: 1.5em;
+    letter-spacing: 0.1em;
+    margin: 0px auto 20px;
+    text-align: center;
+    text-transform: uppercase;
+    width: 980px;
+    border-top: 1px solid #CFCFCF;
+    padding-top: 20px;
+}
+
+.content .page-header h1 {
+    font-size: 44px;
+    line-height: 1.3em;
+    margin-bottom: 80px;
+    margin-top: 80px;
+    width: 470px;
+    color: #36424a;
+    font-family: 'Open Sans', Trebuchet MS, sans-serif;
+    font-weight: 300;
+    float: left;
+}
+
+.section-subheader {
+    padding-bottom: 20px;
+    padding-top: 20px;
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 24px;
+    display: block;
+    text-align: center;
+    color: #36424a;
+    font-family: 'Open Sans', Trebuchet MS, sans-serif;
+}
+
+.blue-box-holder {
+    background-color: #6e8878;
+    color: #FFFFFF;
+    display: block;
+    float: left;
+    padding: 0px 23px 10px;
+}
+
+.blue-box-holder .hs-form label {
+    color: #FFFFFF;
+    float: left;
+    font-size: 0.9em;
+    font-weight: bold;
+    letter-spacing: normal;
+    margin: 20px 20px 5px;
+    text-align: left;
+    text-transform: none;
+    width: 280px;
+}
+
+.blue-box-holder .hs-form .input {
+    width: 300px;
+    float: left;
+    margin-left: 0px;
+    margin-top: 20px;
+}
+
+.blue-box-holder .hs-form .hs-button {
+    border: 1px solid #0F4059 !important;
+    padding: 8px 14px !important;
+    background-color: #6e8878;
+    color: #FFFFFF;
+    -moz-user-select: none !important;
+    background-color: #6e8878 !important;
+    background-image: -moz-linear-gradient(center top, #6e8878, #166086) !important;
+    border: 2px solid #0F4059 !important;
+    border-radius: 4px 4px 4px 4px !important;
+    box-shadow: 0 1px #25A0DF inset !important;
+    color: #FFFFFF !important;
+    cursor: pointer !important;
+    display: inline-block !important;
+    font-family: 'Open Sans', Trebuchet MS, sans-serif !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    height: auto !important;
+    line-height: 24px !important;
+    padding: 4px 12px !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    text-shadow: 0 -1px #092635 !important;
+    width: auto !important;
+    font-size: 20px !important;
+    padding: 15px 25px !important;
+    float: left;
+}
+
+.blue-box-holder .hs-form .hs-button:hover {
+    border: 1px solid #124C6B !important;
+    background-color: #218CC4 !important;
+    background-image: -moz-linear-gradient(center top, #218CC4, #166086) !important;
+    border: 2px solid #124C6B !important;
+    box-shadow: 0 1px #28ACF1 inset, 0 1px 8px rgba(0, 0, 0, 0.3) !important;
+    color: #FFFFFF !important;
+}
+
+.blue-box-holder .hs-form .hs_submit {
+    float: left;
+    margin: 0px;
+    padding: 0px;
+}
+
+.blue-box-holder .hs-form .smart-field {
+    display: block;
+    width: 640px;
+    float: left;
+}
+
+.blue-box-holder .hs-form .actions {
+    margin: 7px 0px;
+    padding: 0px;
+    float: left;
+    clear: both;
+}
+
+.blue-box-holder .hs-form label {
+    color: #FFFFFF;
+    float: left;
+    font-size: 0.8em;
+}
+
+
+/* max-width */
+
+@media screen and (max-width: 480px) {
+    .logo1 {
+        display: none;
+    }
+    .logo2 {
+        text-align: center;
+        width: 100%
+    }
+    .nav ul li a {
+        width: 100%;
+        border-bottom: 1px solid #CFCFCF;
+    }
+    .nav {
+        border-bottom: 0px
+    }
+    .column {
+        float: none;
+    }
+    .two {
+        width: 95%;
+        padding: 10px 0px;
+    }
+}
+
+#loggedInHolder {
+    color: #36424a;
+    background-color: #edf0ee;
+    border-bottom: 1px solid #CFCFCF;
+    margin: 0px;
+    padding: 0px;
+}
+
+#loggedInHolder .loggedInStatus {
+    width: 980px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: right;
+    font-size: 0.75em;
+    padding: 7px 2px
+}

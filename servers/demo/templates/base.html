@@ -1,0 +1,52 @@
+{% import time %}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Milagro MFA demo</title>
+
+        <link href="{{ static_url("css/styles.css") }}" rel="stylesheet" type="text/css" />
+
+        <link rel="shortcut icon" href="{{ static_url("images/favicon.ico") }}">
+        <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans" />
+
+        {% block extra-javascript %}
+        {% end %}
+
+        {% block extra-css %}
+        {% end %}
+    </head>
+
+    <body>
+        <div id="header">
+            <div class="container">
+                <a href="http://milagro.incubator.apache.org/" target="_blank" class="logo1"><img src="{{ static_url("images/milagro-logo.svg") }}" alt="Milagro Logo" width="179" height="57" title="Milagro Logo" style="border-style: none"></a>
+            </div>
+            <div class="clear"></div>
+        </div>
+
+        {% try %}
+            {% if user %}
+                <div id="loggedInHolder"><div class="loggedInStatus">You are logged in as: {{ user }}   |   <a href="/logout"> Log Out </a></div></div>
+            {% end %}
+        {% except %}
+        {% end %}
+
+        <div id="content">
+            <div class="container">
+                <div class="nav">
+                    <ul>
+                        <li><a href="http://milagro.incubator.apache.org/" target="_blank">Milagro Web Site</a></li>
+                        <li><a href="http://www.milagro.io/" target="_blank">Milagro Documentation</a></li>
+                        <li><span class="support">Technical support: <a href="mailto:dev-subscribe@milagro.incubator.apache.org">Milagro mailing list</a></span></li>
+                    </ul>
+                    <div class="clear"></div>
+                </div>
+                <div class="content">
+                    {% block content %}
+                    {% end %}
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block extra-javascript %}
+    <script type="text/javascript" src="{{ mpinJSURL }}?r={{int(time.time()*100)}}"></script>
+
+    <script type="text/javascript">
+        new mpin({
+            targetElement: "pinHolder",
+
+            clientSettingsURL: "{{ clientSettingsURL }}",
+            mobileAppFullURL: "{{ mobileAppFullURL }}",
+
+            successLoginURL: "/protected",
+
+            {% if mobileUseNative %}
+            mobileConfigURL: "{{ mobileConfigURL }}",
+            mobileNativeApp: true,
+            {% else %}
+            mobileNativeApp: false,
+            {% end %}
+
+            onSuccessSetup: function(authData, onSuccess) {
+                console.log("Setup PIN successful")
+                console.log(authData)
+                onSuccess()
+            },
+
+            onSuccessLogin: function(authData) {
+                window.location = "/protected"
+            },
+
+            onReactivate: function(userId){
+                window.location = "/new?userId=" + userId;
+            },
+
+            onUnsupportedBrowser: function(){
+                window.location = "http://www.miracl.com/browser-compatibility-page"
+            },
+
+            onVerifySuccess: function(data){
+            },
+        });
+
+        function createAjax(){
+            if (typeof XMLHttpRequest != "undefined")
+            {
+                return new XMLHttpRequest();
+            }
+            else if (window.ActiveXObject)
+            {
+                var aVersions = ["MSXML2.XMLHttp.5.0","MSXML2.XMLHttp.4.0","MSXML2.XMLHttp.3.0","MSXML2.XMLHttp","Microsoft.XMLHttp"];
+
+                for (var i = 0; i < aVersions.length; i++)
+                {
+                    try
+                    {
+                        var oXmlHttp = new ActiveXObject(aVersions[i]);
+                        return oXmlHttp;
+                    }
+
+                    catch(oError)
+                    {
+                        throw new Error("XMLHttp object could be created.");
+                    }
+                }
+            }
+            throw new Error("XMLHttp object could be created.");
+        }
+
+        {% if user %}
+            (function waitLogout() {
+                xhr = createAjax();
+
+                xhr.onreadystatechange=function(evtXHR) {
+                    if (xhr.readyState == 4)
+                    {
+                        if (xhr.status == 200)
+                        {
+                            window.location.reload();
+                        }
+                    }
+                };
+
+                xhr.open("GET", "{{ logoutWaitURL }}", true);
+                xhr.timeout = 30000;
+                xhr.ontimeout = function() {
+                    waitLogout()
+                }
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.send()
+            })()
+        {% end %}
+    </script>
+{% end %}
+
+{% block content %}
+    {% if flash == "protected" %}
+        <div class="center" style="margin-top:10px;"><b class="dkRed" style="text-align:center">You are not authenticated! Please complete the following steps</b></div>
+    {% end %}
+    {% if flash == "forced_logout" %}
+        <div class="center" style="margin-top:10px;"><b class="dkRed" style="text-align:center">You have been logged out!</b></div>
+    {% end %}
+
+    <h1>Welcome to the Milagro MFA System Demo</h1>
+    <div class="one column center">
+        <div id="pinHolder" style="margin:auto; width:260px;">
+            Loading PinPad...
+        </div>
+    </div>
+    <div class="clear"></div>
+{% end %}

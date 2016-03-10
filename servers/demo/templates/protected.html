@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block extra-javascript %}
+    <script type="text/javascript">
+        function createAjax()
+        {
+            if (typeof XMLHttpRequest != "undefined")
+            {
+                return new XMLHttpRequest();
+            }
+            else if (window.ActiveXObject)
+            {
+                var aVersions = ["MSXML2.XMLHttp.5.0","MSXML2.XMLHttp.4.0","MSXML2.XMLHttp.3.0","MSXML2.XMLHttp","Microsoft.XMLHttp"];
+
+                for (var i = 0; i < aVersions.length; i++)
+                {
+                    try
+                    {
+                        var oXmlHttp = new ActiveXObject(aVersions[i]);
+                        return oXmlHttp;
+                    }
+                    catch(oError)
+                    {
+                        throw new Error("XMLHttp object could be created.");
+                    }
+                }
+            }
+            throw new Error("XMLHttp object could be created.");
+        }
+
+        {% if user %}
+            (function waitLogout(){
+                xhr = createAjax();
+
+                xhr.onreadystatechange=function(evtXHR) {
+                    if (xhr.readyState == 4)
+                    {
+                        if (xhr.status == 200)
+                        {
+                            window.location = "/";
+                        }
+                    }
+                };
+
+                xhr.open("GET", "{{ logoutWaitURL }}", true);
+                xhr.timeout = 30000;
+                xhr.ontimeout = function() {
+                    waitLogout()
+                }
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.send()
+            })()
+        {% end %}
+    </script>
+{% end %}
+
+{% block content %}
+    {% if welcome %}
+        <h1>{{ user }}, you are now logged in!</h1>
+    {% else %}
+        <h1>{{ user }}</h1>
+        <section class="center"><p>You see this page because you are logged in. <a href="/logout">Log out</a></p></section>
+    {% end %}
+
+    <section>
+        <div class="page-header section-header">
+            <h1>Usernames and Passwords are history</h1>
+            <div class="clear"></div>
+            <p class="secondary-header"><span class="section-subheader" id="hs_cos_wrapper_subheader">Security has evolved; the Future of Strong Authentication is here.</span></p>
+            <div class="clear"></div>
+        </div>
+    </section>
+    <div class="clear"></div>
+{% end %}
