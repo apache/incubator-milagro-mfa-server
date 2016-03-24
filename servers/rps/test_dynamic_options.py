@@ -45,6 +45,14 @@ def test_disable_sync():
         local_mapping=DYNAMIC_OPTION_MAPPING)
 
 
+def test_set_password_options():
+    _test_dynamic_options_update(
+        initial_options={'usePassword': "PIN", 'minPasswordLength': 0, 'maxPasswordLength': 100},
+        response_body='{"use_password": "either", "min_password_length": 10, "max_password_length": 11}',
+        expected_options={'usePassword': "either", 'minPasswordLength': 10, 'maxPasswordLength': 11},
+        local_mapping=DYNAMIC_OPTION_MAPPING)
+
+
 def test_mobile_change():
     _test_dynamic_options_update(
         initial_options={
@@ -56,6 +64,9 @@ def test_mobile_change():
                 "mobile_online_name": "Spam",
                 "mobile_online_url": "spam",
                 "mobile_online_type": "onlinea",
+                "use_password": "PIN",
+                "min_password_length": 1,
+                "max_password_length": 10,
             }],
         },
         response_body="""
@@ -67,7 +78,10 @@ def test_mobile_change():
                 "mobile_otp_type": "otpb",
                 "mobile_online_name": "Eggs",
                 "mobile_online_url": "eggs",
-                "mobile_online_type": "onlineb"
+                "mobile_online_type": "onlineb",
+                "use_password": "either",
+                "min_password_length": 5,
+                "max_password_length": 15
             }]
         }
         """,
@@ -80,6 +94,9 @@ def test_mobile_change():
                 "mobile_online_name": "Eggs",
                 "mobile_online_url": "eggs",
                 "mobile_online_type": "onlineb",
+                "use_password": "either",
+                "min_password_length": 5,
+                "max_password_length": 15,
             }],
         },
         local_mapping=DYNAMIC_OPTION_MAPPING)

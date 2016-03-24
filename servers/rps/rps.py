@@ -130,6 +130,12 @@ define("mobileUseNative", default=False, type=bool)
 define("mobileConfig", default=None, type=list)
 define("useNFC", default=False, type=bool)
 
+# password instead of PIN options
+# usePassword should accept 'PIN', 'password' and 'either'
+define("usePassword", default="PIN", type=unicode)
+define("minPasswordLength", default=6, type=int)
+define("maxPasswordLength", default=16, type=int)
+
 
 # Mapping between local names of dynamic options and names from json
 # in the form `remote_name`: `local_name`
@@ -139,6 +145,9 @@ DYNAMIC_OPTION_MAPPING = {
     'time_synchronization_period': 'timePeriod',
     'mobile_use_native': 'mobileUseNative',
     'mobile_client_config': 'mobileConfig',
+    'use_password': 'usePassword',
+    'min_password_length': 'minPasswordLength',
+    'max_password_length': 'maxPasswordLength',
 }
 
 
@@ -309,6 +318,9 @@ class ClientSettingsHandler(BaseHandler):
             "accessNumberDigits": 7 if options.accessNumberUseCheckSum else 6,
             "cSum": 1,
             "useNFC": options.useNFC,
+            "usePassword": options.usePassword,
+            "minPasswordLength": options.minPasswordLength,
+            "maxPasswordLength": options.maxPasswordLength,
         }
 
         if not options.requestOTP:

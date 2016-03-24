@@ -131,3 +131,8 @@ storage = 'memory'
 
 """Use NFC flag for mobile clients"""
 useNFC = False
+
+"""Password options"""
+usePassword = "PIN"
+minPasswordLength = 6
+maxPasswordLength = 16
