@@ -15,6 +15,42 @@ Using standard Git client, clone the code from this repository to a local one.
 The rest of this document assumes that the repository is cloned into `<mpin-backend>`.
 Wherever `<mpin-backend>` appears, it should be replaced with the real location on your machine.
 
+### Install with provided script
+
+`install.sh` bash script is provided to ease the install process.
+You can run it from `<mpin-backend>` base directory like this
+```
+ > ./install.sh
+```
+you can provide optional argument to the script <mpin-front-end-location> where this is an absolute path of
+the location `https://github.com/miracl/milagro-mfa-js-client` is downloaded.
+```
+ > ./install.sh <mpin-front-end-location>
+```
+If location provided the install script can initiate the frontend build and link the Pin Pad  in the Demo, so the demo is fully operational.
+
+If no location is provided you should change the `mpinJSURL` yourself in demo/config.py. Which may include building the frontend and serve it from some web server.
+
+The script is tested and should work without any issue on Ubuntu 14.04,
+other versions of Ubuntu or Debian based distributions may work but is not guaranteed.
+
+The script install some dependencies from apt-get as packages:
+    * python-dev
+    * python-pip
+    * libffi-dev
+    * git ( We use it to get Milagro crypto library)
+    * cmake ( We use it to build Milagro crypto library)
+
+Several pip packages would be installed too. They can be reviewed in \`<mpin-backend>/requirements/common.txt` and `<mpin-backend>/requirements/dev.txt`
+`INSTALL_TYPE` environment variable is used is control  which file is used. You can use “common” or “dev” as values. “common” is used by default
+The script try its best to detect virtualenv and install python packages inside one if it is founded.
+
+The script build the needed Milagro Crypto ( Version 1.0.0 )
+
+NOTE: While running the script if config file is already found in dta, rps or demo the user would have the option to override it or keep it as it is
+
+Review the script for more details.
+
 ### Installing Prerequisites
 
 **1** Update your package manager tool
@@ -162,11 +198,11 @@ Using the following commands, you can test whether the services are running fine
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	. . .
+    . . .
 </head>
 <body>
 </body>
-	. . .
+    . . .
 </html>
 ```
 Finally, open a browser on any machine that has network access to the machine on which the Milagro MFA Services are running. Browse to `http://<mpin-server-ip>:8005`.
