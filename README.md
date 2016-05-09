@@ -15,6 +15,32 @@ Using standard Git client, clone the code from this repository to a local one.
 The rest of this document assumes that the repository is cloned into `<mpin-backend>`.
 Wherever `<mpin-backend>` appears, it should be replaced with the real location on your machine.
 
+### Install with provided script
+
+`install.sh` bash script is provided to ease the install process.
+You can run it from `<mpin-backend>` base directory like this
+```
+ > ./install.sh
+```
+The script is tested and should work without any issue on Ubuntu 14.04,
+other versions of Ubuntu or Debian based distributions may work but is not guaranteed.
+
+The script install some dependencies from apt-get as packages:
+    * python-dev
+    * python-pip
+    * libffi-dev
+    * cmake ( We use it to build Milagro crypto library)
+
+and several pip packages which can be reviewed in \`<mpin-backend>/requirements/common.txt` and `<mpin-backend>/requirements/dev.txt`
+Which one is used is controlled by environment variable `INSTALL_TYPE` which can take “common” or “dev” as values and is set to “common” by default
+The script try its best to detect virtualenv and install python packages inside one if it is founded.
+
+The script also build the needed Milagro Crypto ( Version 1.0.0 )
+
+Review the script for more details.
+
+NOTE: we assume git is installed on the system
+
 ### Installing Prerequisites
 
 **1** Update your package manager tool
