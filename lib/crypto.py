@@ -47,7 +47,7 @@ def get_random_generator(seed):
 
     # random number generator
     RNG = mpin.ffi.new('csprng*')
-    mpin.libmpin.CREATE_CSPRNG(RNG, SEED)
+    mpin.libmpin.MPIN_CREATE_CSPRNG(RNG, SEED)
 
     return RNG
 
@@ -129,7 +129,7 @@ def aes_gcm_encrypt(master_secret, aes_key, rand, header, iv=mpin.IVL):
     CIPHERTEXT[0].val = CIPHERTEXT_val
     CIPHERTEXT[0].max = len(plaintext)
 
-    mpin.libmpin.AES_GCM_ENCRYPT(AES_KEY, IV, HEADER, PLAINTEXT, CIPHERTEXT, TAG)
+    mpin.libmpin.MPIN_AES_GCM_ENCRYPT(AES_KEY, IV, HEADER, PLAINTEXT, CIPHERTEXT, TAG)
     IV_hex = mpin.toHex(IV)
     CIPHERTEXT_hex = mpin.toHex(CIPHERTEXT)
     TAG_hex = mpin.toHex(TAG)
@@ -181,7 +181,7 @@ def aes_gcm_decrypt(aes_key, iv, header, ciphertext):
     TAG[0].max = mpin.PAS
 
     # Decrypt ciphertext
-    mpin.libmpin.AES_GCM_DECRYPT(AES_KEY, IV, HEADER, CIPHERTEXT, PLAINTEXT, TAG)
+    mpin.libmpin.MPIN_AES_GCM_DECRYPT(AES_KEY, IV, HEADER, CIPHERTEXT, PLAINTEXT, TAG)
 
     return mpin.toHex(TAG), mpin.toHex(PLAINTEXT)
 
