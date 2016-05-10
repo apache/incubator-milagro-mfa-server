@@ -21,6 +21,7 @@ from __future__ import division, absolute_import, print_function, unicode_litera
 import json
 import os
 import time
+import math
 
 from pbkdf2 import PBKDF2
 
@@ -134,6 +135,43 @@ def generate_random_webid(rng, use_checksum=True):
 def generate_auth_ott(rng):
     """Return auth OTT."""
     return generate_random_number(rng, crypto.PAS)
+
+
+def get_random_bytes(rng, byte_length = 4):
+    """Return random byte-array."""
+    if type(byte_length) is not int:
+        return None
+    if byte_length <= 0:
+        return None
+
+    r_hex = crypto.random_generate(rng, byte_length)
+    
+    bytes = []
+    for idx in range(len(r_hex) - 2, -1, -2):
+        bytes.append(int(r_hex[idx:idx + 2], 16))
+
+    return bytes
+
+
+def get_random_integer(rng, max_digit = 4):
+    """Return random integer."""
+    if type(max_digit) is not int:
+        return None
+    if max_digit <= 0:
+        return None
+
+    mod_val = 10 ** max_digit
+    byte_length = int(math.ceil(max_digit * math.log(10, 2)/8))
+
+    bytes = get_random_bytes(rng, byte_length)
+
+    r = 0
+    for idx in range(byte_length - 1, -1, -1):
+        r = (r << 8) + bytes[idx]
+    r = r % mod_val
+
+    return r
+
 
 
 class SecretsError(Exception):

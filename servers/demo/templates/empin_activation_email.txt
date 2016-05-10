@@ -1,0 +1,6 @@
+Your Activation code is
+{{ activationCodeStr }}
+
+Regards,
+The Milagro MFA Team
+

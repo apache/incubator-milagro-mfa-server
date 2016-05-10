@@ -27,6 +27,8 @@ import random
 import sys
 import time
 import urllib
+import math
+import execjs
 from urlparse import urlparse
 
 import tornado.autoreload
@@ -129,6 +131,12 @@ define("setDeviceName", default=False, type=bool)
 define("mobileUseNative", default=False, type=bool)
 define("mobileConfig", default=None, type=list)
 define("useNFC", default=False, type=bool)
+
+# eMpin AUTHENTICATION PROTOCOL
+define("maxTimeGap", default=300, type=int)
+define("nonceLifetime", default=600, type=int)
+define("jsLibrary", default=os.path.dirname(os.path.abspath(__file__)) + "/../../lib/" + "amcl.js", type=unicode)
+
 
 
 # Mapping between local names of dynamic options and names from json
@@ -309,6 +317,10 @@ class ClientSettingsHandler(BaseHandler):
             "accessNumberDigits": 7 if options.accessNumberUseCheckSum else 6,
             "cSum": 1,
             "useNFC": options.useNFC,
+
+            "eMpinAuthenticationURL": "{0}/eMpinAuthentication".format(baseURL),
+            "eMpinActivationURL": "{0}/eMpinActivation".format(baseURL),
+            "eMpinActivationVerifyURL": "{0}/eMpinActivationVerify".format(baseURL),
         }
 
         if not options.requestOTP:
@@ -727,6 +739,20 @@ class RPSAccessNumberHandler(BaseHandler):
 
         authOTT = I.authOTT
         if authOTT and (str(I.status) == "200"):
+            authToken = I.authToken
+            if authToken:
+                mpin_id = authToken["mpin_id"]
+                if not mpin_id:
+                    log.error("no mpin_id: {0}".format(I.authToken))
+                else:
+                    identity = json.loads(mpin_id)
+                    userId = identity["userID"]
+            if userId:
+                self.write({"authOTT": authOTT, "userId": userId})
+            else:
+                self.write({"authOTT": authOTT, "userId": ""})
+            self.finish()
+
             self.write({"authOTT": authOTT})
             self.finish()
         else:
@@ -1493,6 +1519,684 @@ class MobileConfigHandler(BaseHandler):
             self.write(json.dumps(options.mobileConfig))
 
 
+
+def add_nonce(storage, mpin_id, nonce):
+    """ eMpin authencitication protocol sub-module
+
+    Add the nonce to Mpin-ID's nonce list of server storage.
+    """
+    tmp = storage.find(
+        stage="empin-auth-nonce-list-check",
+        mpinId=mpin_id
+    )
+
+    if tmp is not None:
+        tmp.nonce_list.append(nonce)
+        storage.update_item(tmp)
+    else:
+        storage.add(
+            stage="empin-auth-nonce-list-check",
+            mpinId=mpin_id,
+            nonce_list=[nonce]
+        )
+
+    nonce_expires = Time.syncedISO(seconds=options.nonceLifetime)
+
+    storage.add(
+        expire_time=Time.ISOtoDateTime(nonce_expires),
+        stage="empin-auth-nonce-check",
+        mpinId=mpin_id,
+        nonce=nonce
+    )
+
+def update_nonce_list(storage, mpin_id):
+    """ eMpin authencitication protocol sub-module
+
+    Update Mpin-ID's nonce list of server storage.
+    Expired nonces are removed in nonce list.
+    """
+    tmp = storage.find(
+        stage="empin-auth-nonce-list-check",
+        mpinId=mpin_id
+    )
+
+    if tmp is not None:
+        i = 0
+        while i < len(tmp.nonce_list):
+            item = storage.find(
+                stage="empin-auth-nonce-check",
+                mpinId=mpin_id,
+                nonce=tmp.nonce_list[i]
+            )
+            if item is None:
+                del tmp.nonce_list[i]
+            else:
+                i = i + 1
+
+        storage.update_item(tmp)
+        return tmp.nonce_list
+    else:
+        return []
+
+def check_nonce(storage, mpin_id, nonce):
+    """ eMpin authencitication protocol sub-module
+
+    Check the nonce is in Mpin-ID's nonce list.
+    """
+    nonce_list = update_nonce_list(storage, mpin_id)
+
+    if nonce in nonce_list:
+        return False
+
+    return True
+
+
+class VerifyError(Exception):
+    pass
+
+class InvalidNonceError(Exception):
+    pass
+
+class InvalidClientTimeError(Exception):
+    pass
+
+class AttemptsCountLimitError(Exception):
+    pass
+
+
+class EMpinAuthenticationHandler(BaseHandler):
+    """
+    ..  apiTextStart
+
+    *Description*
+
+      Implements the eM-Pin Non-intaractive Authencitaion Protocol
+
+    *URL structure*
+
+      ``/eMpinAuthentication``
+
+    *HTTP Request Method*
+
+      POST
+
+    *Request Data*
+
+      JSON request::
+
+        {
+          "MpinId": [Client's Mpin ID in Hex-string],
+          "U": [Elliptic curve point in Hex-string],
+          "V": [Elliptic curve point in Hex-string],
+          "W": [Elliptic curve point in Hex-string],
+          "CCT": [Client's current time in Hex-string],
+          "Nonce":  [Random value in Hex-string],
+        }
+
+    *Returns*
+
+      JSON response::
+
+        {
+            'version': [Version in String],
+            'authOTT': [Random value in Hex-string],
+            'message': [OK/NG message in String],
+        }
+
+    *Status-Codes and Response-Phrases*
+
+      ::
+
+        Status-Code          Response-Phrase
+
+        200                  OK
+        403                  Invalid signature received.
+        403                  Invalid nonce received.
+        403                  Invalid client time received.
+        410                  Attempts count is the limit.
+        403                  Invalid data received.
+        500                  Server-side Failed
+    ..  apiTextEnd
+
+    """
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def post(self):
+        # Remote request information
+        if 'User-Agent' in self.request.headers.keys():
+            UA = self.request.headers['User-Agent']
+        else:
+            UA = 'unknown'
+        request_info = '%s %s %s %s ' % (self.request.path, self.request.remote_ip, UA, Time.syncedISO())
+
+        try:
+            receive_data = tornado.escape.json_decode(self.request.body)
+
+            server_secret_hex = self.application.server_secret.server_secret.encode("hex")
+
+            mpin_id_hex = receive_data['MpinId']
+            mpin_id = mpin_id_hex.decode('hex')
+
+            # NONCE CHECK
+            nonce_hex = receive_data['Nonce']
+            if not check_nonce(self.storage, mpin_id_hex, nonce_hex):
+                raise InvalidNonceError()
+
+            # TIMEGAP CHECK
+            client_time = int(receive_data['CCT'], 16)
+            server_time = Time.DateTimetoEpoch(datetime.datetime.now())
+            timegap = int(math.fabs(client_time - server_time))
+
+            if timegap > (options.maxTimeGap * 1000):
+                raise InvalidClientTimeError
+
+            # VERIFY (JS lib)
+            compiled_jslib = execjs.compile(open(options.jsLibrary).read())
+            verify_data = compiled_jslib.call("eMpinAuth.verify", receive_data, server_secret_hex)
+
+            aI = self.storage.find(stage="empin-auth-attempts", mpinId=mpin_id)
+            log.debug("aI: {0}".format(aI))
+
+            attempts_count = aI and aI.attemptsCount or 0
+            if attempts_count >= options.maxInvalidLoginAttempts:
+                raise AttemptsCountLimitError()
+
+            if verify_data['result'] == 'ng':
+                attempts_count += 1
+                log.debug("attemptsCount: {0}".format(attempts_count))
+                if aI:
+                    aI.update(attemptsCount=attempts_count)
+                else:
+                    self.storage.add(stage="empin-auth-attempts", mpinId=mpin_id, attemptsCount=attempts_count)
+
+                if attempts_count >= options.maxInvalidLoginAttempts:
+                    raise AttemptsCountLimitError()
+                else:
+                    raise VerifyError()
+            else:
+                add_nonce(self.storage, mpin_id_hex, nonce_hex)
+                success_code = 0
+                if aI:
+                    aI.delete()
+
+        except VerifyError as ex:
+            reason = "Invalid signature received."
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(403, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        except InvalidNonceError as ex:
+            reason = "Invalid nonce received."
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(403, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        except InvalidClientTimeError as ex:
+            reason = "Invalid client time received."
+            log.error("%s %s (timegap %s sec)" % (request_info, reason, timegap / 1000))
+            self.set_status(403, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        except AttemptsCountLimitError as ex:
+            reason = "Attempts count is the limit."
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(410, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        except KeyError as ex:
+            reason = "Invalid data received. %s argument missing" % ex.message
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(403, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        except (ValueError, TypeError) as ex:
+            reason = "Invalid data received. %s" % ex.message
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(403, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        log.debug("%s %s" % (request_info, receive_data))
+
+
+        # Authentication Token expiry
+        expires = Time.syncedISO(seconds=SIGNATURE_EXPIRES_OFFSET_SECONDS)
+
+        # Form Authentication token
+        token = {
+            "mpin_id": mpin_id,
+            "mpin_id_hex": mpin_id_hex,
+            "successCode": success_code,
+            "pinError": 0,
+            "pinErrorCost": 0,
+            "expires": expires,
+        }
+        log.debug("%s eM-Pin Auth token: %s" % (request_info, token))
+
+        # Form authentication 128 hex encoded One Time Password
+        authOTT = secrets.generate_auth_ott(self.application.server_secret.rng)
+
+        # Response
+        return_data = {
+            'version': VERSION,
+            'authOTT': authOTT,
+            'message': "eMpin Authentication is valid.",
+        }
+
+        self.storage.add(
+            expire_time=Time.ISOtoDateTime(expires),
+            stage="auth",
+            authOTT=authOTT,
+            mpinId=mpin_id,
+            wid="",
+            webOTT=0,
+            authToken=token,
+        )
+
+        reason = "OK"
+        log.debug("%s %s" % (request_info, return_data))
+        self.set_status(200, reason=reason)
+        self.content_type = 'application/json'
+        self.write(return_data)
+        self.finish()
+        return
+
+
+class EMpinActivationHandler(BaseHandler):
+    """
+    ..  apiTextStart
+
+    *Description*
+
+      Implements the activation phase of the eM-Pin Non-intaractive Authencitaion Protocol
+
+    *URL structure*
+
+      ``/eMpinActivation``
+
+    *HTTP Request Method*
+
+      PUT
+
+    *Request Data*
+
+      JSON request::
+
+        {
+          "userId": [User ID in String (e.g. mail address)],
+          "mobile": [Flag (mobile or not) in Number],
+        }
+
+    *Returns*
+
+      JSON response::
+
+        {
+            "mpinId": [Client's Mpin ID in Hex-string],
+            "expireTime": [Activation expire timeServer's in String],
+            "nowTime": [Server's current time in String],
+            "active": [Flag (force activation is true or false)],
+            "activationCode": [Random value in Number],
+            "params": [URL parameters in String],
+            "clientSecretShare": [Encoded client secret (share) in Hex-string],
+        }
+
+    *Status-Codes and Response-Phrases*
+
+      ::
+
+        Status-Code          Response-Phrase
+
+        200                  OK
+        400                  BAD REQUEST.
+        500                  Server-side Failed
+    ..  apiTextEnd
+
+    """
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def put(self):
+        # Remote request information
+        if 'User-Agent' in self.request.headers.keys():
+            UA = self.request.headers['User-Agent']
+        else:
+            UA = 'unknown'
+        request_info = '%s %s %s %s ' % (self.request.path, self.request.remote_ip, UA, Time.syncedISO())
+
+        try:
+            receive_data = json.loads(self.request.body)
+
+            mobile = int(receive_data.get("mobile", "0"))
+            user_id = receive_data.get("userId")
+            device_name = receive_data.get("deviceName", "")
+            user_data = receive_data.get("userData")
+
+            if not user_id:
+                log.error("Missing userId")
+                log.debug(self.request.body)
+                self.set_status(400, reason="BAD REQUEST. INVALID USERID")
+                self.finish()
+                return
+
+        except ValueError:
+            log.error("Cannot decode body as JSON.")
+            log.debug(self.request.body)
+            self.set_status(400, reason="BAD REQUEST. INVALID JSON")
+            self.finish()
+            return
+        log.debug("%s %s" % (request_info, receive_data))
+
+        mpin_id_hex = makeMPinID(user_id, mobile)
+        log.debug("New mpinID generated for user {0}: {1}".format(user_id, mpin_id_hex))
+
+
+        ## GET CLIENT SECRET from DTA
+        hash_mpin_id_hex = hashlib.sha256(mpin_id_hex.decode("hex")).hexdigest()
+
+        # Generate signed params
+        path = "clientSecret"
+        expires = Time.syncedISO(seconds=options.VerifyUserExpireSeconds)
+        hash_user_id = ""
+        M = str("%s%s%s%s%s" % (path, Keys.app_id, hash_mpin_id_hex, hash_user_id, expires))
+        signature_hex = signMessage(M, Keys.app_key)
+
+        param_values = {
+            'app_id': Keys.app_id,
+            'expires': expires,
+            'hash_mpin_id': hash_mpin_id_hex,
+            'hash_user_id': hash_user_id,
+            'mobile': mobile,
+            'signature': signature_hex,
+        }
+
+        url = "{0}/{1}".format(options.DTALocalURL.rstrip("/"), path)
+        url_params = url_concat(url, param_values)
+
+        client = tornado.httpclient.AsyncHTTPClient()
+        response = yield tornado.gen.Task(client.fetch, url_params, method="GET")
+
+        if response.error:
+            log.error("DTA clientSecret Failed. URL: {0}, Code: {1}, Message: {2}".format(url_params, response.error.code, response.error.message))
+            self.set_status(500)
+            self.finish()
+            return
+
+        if response.body:
+            try:
+                response_data = json.loads(response.body)
+                client_secret_share = response_data["clientSecret"]
+
+            except:
+                log.error("DTA /clientSecret Failed. Invalid JSON response".format(response.body))
+                self.set_status(500)
+                self.finish()
+                return
+
+        log.debug("params: %s" % param_values)
+        log.debug("client secret (share): %s" % client_secret_share)
+
+
+        ## GET ACTIVATION CODE
+        activation_code = secrets.get_random_integer(self.application.server_secret.rng, 12)
+
+
+        ## POINT CALC with ACTIVATION CODE (JS lib)
+        compiled_jslib = execjs.compile(open(options.jsLibrary).read())
+        encoded_client_secret_share_hex = compiled_jslib.call("eMpinAuth.calcClientSecretWithActivationCode", mpin_id_hex, client_secret_share, activation_code, True)
+
+        log.debug("encoded client secret (share): %s" % encoded_client_secret_share_hex)
+
+
+        ### MAIL REQUEST for ACTIVATION CODE to RPA
+        # Generate activateKey
+        now_time = Time.syncedNow()
+        expire_time = now_time + datetime.timedelta(seconds=options.VerifyUserExpireSeconds)
+
+        requestBody = json.dumps({
+            "userId": user_id,
+            "mpinId": mpin_id_hex,
+            "mobile": mobile,
+            "activationCode": activation_code,
+            "expireTime": Time.DateTimeToISO(expire_time),
+            "resend": bool(None),
+            "deviceName": device_name,
+            "userData": user_data or ""
+        })
+
+        client = tornado.httpclient.AsyncHTTPClient()
+
+        pr = urlparse(self.request.full_url())
+        base_url = "{0}://{1}".format(pr.scheme, pr.netloc)
+
+        headers = {
+            "RPS-BASE-URL": base_url
+        }
+
+        # Forward headers to the RPA
+        if options.RegisterForwardUserHeaders:
+            allHeaders = options.RegisterForwardUserHeaders == "*"
+            rHeaders = map(lambda x: x.strip().lower(), options.RegisterForwardUserHeaders.split(","))
+            for h in self.request.headers:
+                if allHeaders or (h.lower() in rHeaders):
+                    headers[h] = self.request.headers[h]
+
+        RPAVerifyUserURL = options.RPAVerifyUserURL or data.get('RPAVerifyUserURL')
+
+        if not RPAVerifyUserURL:
+            log.error("RPAVerifyUserURL option not set! Unable to make Verify request")
+            self.set_status(400, "RPAVerifyUserURL option not set.")
+            self.finish()
+            return
+
+        # Make the verify request to the RPA
+        response = yield tornado.gen.Task(client.fetch, RPAVerifyUserURL, method="POST", headers=headers, body=requestBody)
+
+        if response.error:
+            log.error("RPA verify request error. Code: {0}, Message: {1}".format(response.error.code, response.error.message))
+            error = response.error.code
+            if error >= 500:
+                error = 500
+
+            self.set_status(error)
+            self.finish()
+            return
+
+        force_activate = False
+        if response.body:
+            try:
+                response_data = json.loads(response.body)
+                force_activate = response_data.get("forceActivate", force_activate)
+
+            except:
+                log.error("RPA verify request: Invalid JSON response: {0}".format(response.body))
+                self.set_status(500)
+                self.finish()
+                return
+
+        if not force_activate:
+            activation_code = 0
+
+        log.debug("ActivationCode: {0}. ForceActivate: {1}. Activating UserID {2}".format(activation_code, force_activate, user_id))
+
+        params = urllib.urlencode(param_values)
+
+        # Response to the client
+        return_data = {
+            "mpinId": mpin_id_hex,
+            "expireTime": expire_time.isoformat(),
+            "nowTime": now_time.isoformat(),
+            "active": force_activate,
+            "activationCode": activation_code,
+            "params": params,
+            "clientSecretShare": encoded_client_secret_share_hex
+        }
+
+        reason = "OK"
+        log.debug("%s %s" % (request_info, return_data))
+        self.set_status(200, reason=reason)
+        self.content_type = 'application/json'
+        self.write(return_data)
+        self.finish()
+        return
+
+
+class EMpinActivationVerifyHandler(BaseHandler):
+    """
+    ..  apiTextStart
+
+    *Description*
+
+      Implements the activation phase of the eM-Pin Non-intaractive Authencitaion Protocol
+
+    *URL structure*
+
+      ``/eMpinActivationVerify``
+
+    *HTTP Request Method*
+
+      POST
+
+    *Request Data*
+
+      JSON request::
+
+        {
+          "MpinId": [Client's Mpin ID in Hex-string],
+          "U": [Elliptic curve point in Hex-string],
+          "V": [Elliptic curve point in Hex-string],
+        }
+
+    *Returns*
+
+      JSON response::
+
+        {
+            'version': [Version in String],
+            'result': [true/false in Boolean],
+            'message': [OK/NG message in String],
+        }
+
+    *Status-Codes and Response-Phrases*
+
+      ::
+
+        Status-Code          Response-Phrase
+
+        200                  OK
+        403                  Invalid signature received.
+        410                  Attempts count is the limit.
+        403                  Invalid data received.
+        500                  Server-side Failed
+    ..  apiTextEnd
+
+    """
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def post(self, mpinId):
+        # Remote request information
+        if 'User-Agent' in self.request.headers.keys():
+            UA = self.request.headers['User-Agent']
+        else:
+            UA = 'unknown'
+        request_info = '%s %s %s %s ' % (self.request.path, self.request.remote_ip, UA, Time.syncedISO())
+
+        try:
+            receive_data = tornado.escape.json_decode(self.request.body)
+
+            server_secret_hex = self.application.server_secret.server_secret.encode("hex")
+
+            mpin_id_hex = receive_data['MpinId']
+            mpin_id = mpin_id_hex.decode('hex')
+
+            # ACTIVATION VERIFY (JS lib)
+            compiled_jslib = execjs.compile(open(options.jsLibrary).read())
+            verify_data = compiled_jslib.call("eMpinAuth.activationVerify", receive_data, server_secret_hex)
+
+            aI = self.storage.find(stage="empin-auth-attempts", mpinId=mpin_id)
+            log.debug("aI: {0}".format(aI))
+
+            attempts_count = aI and aI.attemptsCount or 0
+            if attempts_count >= options.maxInvalidLoginAttempts:
+                raise AttemptsCountLimitError()
+
+            if verify_data['result'] == 'ng':
+                attempts_count += 1
+                log.debug("attemptsCount: {0}".format(attempts_count))
+                if aI:
+                    aI.update(attemptsCount=attempts_count)
+                else:
+                    self.storage.add(stage="empin-auth-attempts", mpinId=mpin_id, attemptsCount=attempts_count)
+
+                if attempts_count >= options.maxInvalidLoginAttempts:
+                    raise AttemptsCountLimitError()
+                else:
+                    raise VerifyError()
+            else:
+                if aI:
+                    aI.delete()
+
+        except VerifyError as ex:
+            reason = "Invalid signature received."
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(403, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'result': False, 'message': reason})
+            self.finish()
+            return
+        except AttemptsCountLimitError as ex:
+            reason = "Attempts Limits."
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(410, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        except KeyError as ex:
+            reason = "Invalid data received. %s argument missing" % ex.message
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(403, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        except (ValueError, TypeError) as ex:
+            reason = "Invalid data received. %s" % ex.message
+            log.error("%s %s" % (request_info, reason))
+            self.set_status(403, reason=reason)
+            self.content_type = 'application/json'
+            self.write({'version': VERSION, 'message': reason})
+            self.finish()
+            return
+        log.debug("%s %s" % (request_info, receive_data))
+
+        # Response
+        return_data = {
+            'version': VERSION,
+            'result': True,
+            'message': "eMpin Activation is valid.",
+        }
+
+        reason = "OK"
+        log.debug("%s %s" % (request_info, return_data))
+        self.set_status(200, reason=reason)
+        self.content_type = 'application/json'
+        self.write(return_data)
+        self.finish()
+        return
+
+
+
 # MAIN
 class Application(tornado.web.Application):
     def __init__(self):
@@ -1510,6 +2214,11 @@ class Application(tornado.web.Application):
             # Authentication
             (r"/{0}/pass1".format(rpsPrefix), Pass1Handler),
             (r"/{0}/pass2".format(rpsPrefix), Pass2Handler),
+
+            # eMpin Handlers
+            (r"/{0}/eMpinAuthentication".format(rpsPrefix), EMpinAuthenticationHandler),
+            (r"/{0}/eMpinActivation".format(rpsPrefix), EMpinActivationHandler),  # PUT
+            (r"/{0}/eMpinActivationVerify(/?[0-9A-Fa-f]*)".format(rpsPrefix), EMpinActivationVerifyHandler),  # POST
 
             (r"/authenticate", AuthenticateHandler),  # POST
 
@@ -1536,6 +2245,7 @@ class Application(tornado.web.Application):
         self.storage = storage_cls(
             tornado.ioloop.IOLoop.instance(),
             "stage,mpinId",
+            "stage,mpinId,nonce",
             "stage,authOTT",
             "stage,wid",
             "stage,webOTT",

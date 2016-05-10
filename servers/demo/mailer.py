@@ -46,7 +46,7 @@ def setup(smtpserver, smtpport, senderaddress, usetls):
 
 
 # The actual mail sending routine (which should be ran from sendActivationEmail() in a separate thread so that Tornado is not blocked)
-def mailerThread(recipientAddress, subject, deviceName, validationURL, user=None, password=None):
+def mailerThread(recipientAddress, subject, deviceName, replacementText, emailTemplate, user=None, password=None):
     if not smtpServer:
         return
     msg = MIMEMultipart('alternative')
@@ -55,10 +55,10 @@ def mailerThread(recipientAddress, subject, deviceName, validationURL, user=None
     msg['To'] = recipientAddress
 
     # Text version (in case the mail client does not like the HTML part).
-    mailText = render_template('activation_email.txt', validationURL=validationURL)
+    mailText = render_template(emailTemplate + '.txt', validationURL=replacementText, activationCodeStr=replacementText)
 
     # HTML version
-    mailHTML = render_template('activation_email.html', validationURL=validationURL)
+    mailHTML = render_template(emailTemplate + '.html', validationURL=replacementText, activationCodeStr=replacementText)
 
     mailPartText = MIMEText(mailText, 'plain')
     mailPartHTML = MIMEText(mailHTML, 'html')
@@ -79,5 +79,15 @@ def mailerThread(recipientAddress, subject, deviceName, validationURL, user=None
 
 
 def sendActivationEmail(recipientAddress, subject, deviceName, validationURL, user=None, password=None):
-    thread = Thread(target=mailerThread, args=(recipientAddress, subject, deviceName, validationURL, user, password))
+    thread = Thread(target=mailerThread, args=(recipientAddress, subject, deviceName, validationURL, 'activation_email', user, password))
+    thread.start()
+
+
+def sendEMpinActivationEmail(recipientAddress, subject, deviceName, activationCode, user=None, password=None):
+    ac3 = activationCode % 10000
+    ac2 = activationCode / 10000 % 10000
+    ac1 = activationCode / (10000 * 10000) % 10000
+    activationCodeStr = '%04d-%04d-%04d' % (ac1, ac2, ac3)
+
+    thread = Thread(target=mailerThread, args=(recipientAddress, subject, deviceName, activationCodeStr, 'empin_activation_email', user, password))
     thread.start()

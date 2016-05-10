@@ -268,8 +268,11 @@ class VerifyUserHandler(BaseHandler):
             identity = data["mpinId"]
             userid = data["userId"]
             expireTime = data["expireTime"]
-            activateKey = data["activateKey"]
             mobile = data["mobile"]
+
+            activateKey = data.get("activateKey", "")
+            activationCode = int(data.get("activationCode", 0))
+
         except ValueError:
             log.error("Cannot decode body as JSON.")
             log.debug(self.request.body)
@@ -285,23 +288,32 @@ class VerifyUserHandler(BaseHandler):
             self.finish()
             return
 
-        if options.verifyIdentityURL.startswith("/"):  # relative path
-            base_url = "{0}/{1}".format(
-                self.request.headers.get("RPS-BASE-URL").rstrip("/"),
-                options.verifyIdentityURL.lstrip("/")
-            )
-        else:
-            base_url = options.verifyIdentityURL
-
-        validateURL = self._generateValidationURL(base_url, identity, activateKey, expireTime)
-        log.info("Sending activation email for user {0}: {1}".format(userid.encode("utf-8"), validateURL))
-
         deviceName = mobile and "Mobile" or "PC"
 
         if options.forceActivate:
             log.warning("forceActivate option set! User activated without verification!")
         else:
-            mailer.sendActivationEmail(userid.encode("utf-8"), options.emailSubject, deviceName, validateURL, options.smtpUser, options.smtpPassword)
+            ## for ActivateKey
+            if ((type(activateKey) is str) or (type(activateKey) is unicode)) and (activateKey != ''):
+                if options.verifyIdentityURL.startswith("/"):  # relative path
+                    base_url = "{0}/{1}".format(
+                        self.request.headers.get("RPS-BASE-URL").rstrip("/"),
+                        options.verifyIdentityURL.lstrip("/")
+                    )
+                else:
+                    base_url = options.verifyIdentityURL
+
+                validateURL = self._generateValidationURL(base_url, identity, activateKey, expireTime)
+                log.info("Sending activation email for user {0}: {1}".format(userid.encode("utf-8"), validateURL))
+
+                mailer.sendActivationEmail(userid.encode("utf-8"), options.emailSubject, deviceName, validateURL, options.smtpUser, options.smtpPassword)
+
+            ## for ActivationCode
+            if (type(activationCode) is int) and (activationCode != 0):
+                log.info("Sending activation email for user {0}, activationCode: {1}".format(userid.encode("utf-8"), activationCode))
+
+                mailer.sendEMpinActivationEmail(userid.encode("utf-8"), options.emailSubject, deviceName, activationCode, options.smtpUser, options.smtpPassword)
+
             log.warning("Sending Mail!")
 
         responseData = {
