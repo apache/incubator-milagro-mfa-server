@@ -1,4 +1,4 @@
-# Milagro MFA Services
+# Milagro MFA Server
 
 ## General
 
