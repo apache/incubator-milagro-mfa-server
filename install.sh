@@ -18,7 +18,7 @@ function install_dependencies {
 
     # Install the required packages
     VIRTUALENV=$(python -c 'import sys; print hasattr(sys, "real_prefix")' 2>/dev/null)
-    if [[ $VIRTUALENV ]]
+    if [[ $VIRTUALENV == "True" ]]
     then
         # If in virtualenv use the local provided pip
         # We assume that activation script is used and pip as command points to virtualenv pip
