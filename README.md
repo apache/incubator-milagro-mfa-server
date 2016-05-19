@@ -29,11 +29,9 @@ Wherever `<mpin-backend>` appears, it should be replaced with the real location 
 
 ### Building the Milagro Crypto Libraries
 
-Clone the [_milagro-crypto_ repository](https://github.com/miracl/milagro-crypto) and checkout tag `1.0.0`.
+Clone the [_milagro-crypto_ repository](https://github.com/miracl/milagro-crypto) 
 ```
 > git clone https://github.com/miracl/milagro-crypto.git
-> cd milagro-crypto
-> git checkout tags/1.0.0
 ``` 
 Follow the instructions for your platform from the milagro-crypto [README file](https://github.com/miracl/milagro-crypto/blob/master/README.md#build-instructions).
 
