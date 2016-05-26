@@ -27,6 +27,7 @@ import random
 import sys
 import time
 import urllib
+import uuid
 from urlparse import urlparse
 
 import tornado.autoreload
@@ -129,6 +130,9 @@ define("setDeviceName", default=False, type=bool)
 define("mobileUseNative", default=False, type=bool)
 define("mobileConfig", default=None, type=list)
 define("useNFC", default=False, type=bool)
+define("serviceName", default="", type=unicode)
+define("serviceType", default="online", type=unicode)
+define("serviceIconUrl", default="", type=unicode)
 
 
 # Mapping between local names of dynamic options and names from json
@@ -314,6 +318,9 @@ class ClientSettingsHandler(BaseHandler):
         if not options.requestOTP:
             params["accessNumberURL"] = "{0}/accessnumber".format(baseURL)
             params["getAccessNumberURL"] = "{0}/getAccessNumber".format(baseURL)
+
+        if options.mobileUseNative:
+            params["getQrUrl"] = "{0}/getQrUrl".format(baseURL)
 
         self.write(params)
         self.finish()
@@ -674,7 +681,7 @@ class RPSGetAccessNumberHandler(BaseHandler):
         # Generate request for MPinWIDServer for WID
         wId = secrets.generate_random_webid(self.application.server_secret.rng, options.accessNumberUseCheckSum)
 
-        while wId is None or (self.storage.find(stage="auth", webID=wId)):
+        while wId is None or (self.storage.find(stage="auth", wid=wId)):
             if wId is None:
                 log.debug("WebId is None".format(wId))
             else:
@@ -694,6 +701,44 @@ class RPSGetAccessNumberHandler(BaseHandler):
         params = {
             "ttlSeconds": options.accessNumberExpireSeconds,
             "accessNumber": wId,
+            "webOTT": webOTT,
+            "localTimeStart": Time.DateTimetoEpoch(nowTime),
+            "localTimeEnd": Time.DateTimetoEpoch(expirePinPadTime)
+        }
+
+        self.write(params)
+        self.finish()
+
+
+class RPSGetQrUrlHandler(BaseHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def post(self):
+        # Generate request for MPinWIDServer for WID
+        wId = uuid.uuid4().hex
+
+        while wId is None or (self.storage.find(stage="auth", wid=wId)):
+            if wId is None:
+                log.debug("WebId is None".format(wId))
+            else:
+                log.debug("WebId {0} already exists. Generating a new one".format(wId))
+
+            wId = uuid.uuid4().hex
+
+        log.debug("New webId generated: {0}." .format(wId))
+
+        webOTT = secrets.generate_ott(options.OTTLength, self.application.server_secret.rng, "hex")
+
+        nowTime = Time.syncedNow()
+        expirePinPadTime = nowTime + datetime.timedelta(seconds=options.accessNumberExpireSeconds)
+        expireTime = expirePinPadTime + datetime.timedelta(seconds=options.accessNumberExtendValiditySeconds)
+
+        self.storage.add(stage="auth", expire_time=expireTime, webOTT=webOTT, wid=wId)
+
+        qrUrl = options.rpsBaseURL + "#" + wId
+        params = {
+            "ttlSeconds": options.accessNumberExpireSeconds,
+            "qrUrl": qrUrl,
             "webOTT": webOTT,
             "localTimeStart": Time.DateTimetoEpoch(nowTime),
             "localTimeEnd": Time.DateTimetoEpoch(expirePinPadTime)
@@ -846,6 +891,22 @@ class StatusHandler(BaseHandler):
         self.set_status(200, reason=reason)
         self.write({'version': VERSION, 'message': reason})
 
+        self.finish()
+
+
+class ServiceHandler(BaseHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def get(self):
+        params = {
+            "name": options.serviceName,
+            "url": options.rpsBaseURL,
+            "type": options.serviceType,
+            "rps_prefix": options.rpsPrefix,
+            "icon_url": options.serviceIconUrl,
+        }
+
+        self.write(params)
         self.finish()
 
 
@@ -1505,6 +1566,7 @@ class Application(tornado.web.Application):
             (r"/{0}/setupDone/([0-9A-Fa-f]+)".format(rpsPrefix), RPSSetupDoneHandler),  # POST
             (r"/{0}/accessnumber".format(rpsPrefix), RPSAccessNumberHandler),  # POST
             (r"/{0}/getAccessNumber".format(rpsPrefix), RPSGetAccessNumberHandler),  # POST
+            (r"/{0}/getQrUrl".format(rpsPrefix), RPSGetQrUrlHandler),  # POST
             (r"/{0}/clientSettings".format(rpsPrefix), ClientSettingsHandler),
             (r"/{0}/authenticate".format(rpsPrefix), RPSAuthenticateHandler),  # POST, for mobile login
             # Authentication
@@ -1518,6 +1580,7 @@ class Application(tornado.web.Application):
             (r"/loginResult", LoginResultHandler),  # POST
 
             (r"/status", StatusHandler),
+            (r"/service", ServiceHandler),  # GET
             (r"/dynamicOptions", DynamicOptionsHandler),  # POST, GET
             (r"/{0}/mobileConfig".format(rpsPrefix), MobileConfigHandler),  # GET
             (r"/(.*)", DefaultHandler),
