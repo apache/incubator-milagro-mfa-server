@@ -113,6 +113,12 @@ LogoutURL = '/logout'
 # rpsPrefix = 'rps'  # Default
 # setDeviceName = True
 
+"""Mobile client options"""
+# mobileUseNative = True # False by default
+serviceName = "Milagro MFA Demo"
+# serviceType = "online" # Default
+# serviceIconUrl = "http://example.com/icon.jpg"
+
 """Key value storage options"""
 storage = 'memory'
 

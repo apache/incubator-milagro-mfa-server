@@ -100,7 +100,7 @@ define("seedValueLength", default=100, type=int)
 define("DTALocalURL", default="", type=unicode)
 
 # access number options
-define("accessNumberExpireSeconds", default=60, type=int)
+define("accessNumberExpireSeconds", default=300, type=int)
 define("accessNumberExtendValiditySeconds", default=5, type=int)
 define("accessNumberUseCheckSum", default=True, type=bool)
 
