@@ -27,7 +27,6 @@ import random
 import sys
 import time
 import urllib
-import uuid
 from urlparse import urlparse
 
 import tornado.autoreload
@@ -56,6 +55,8 @@ from dynamic_options import (
     generate_dynamic_options,
     process_dynamic_options,
 )
+
+from mobile_flow import MobileFlow
 
 if os.name == "posix":
     from mpDaemon import Daemon
@@ -714,35 +715,8 @@ class RPSGetQrUrlHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.engine
     def post(self):
-        # Generate request for MPinWIDServer for WID
-        wId = uuid.uuid4().hex
-
-        while wId is None or (self.storage.find(stage="auth", wid=wId)):
-            if wId is None:
-                log.debug("WebId is None".format(wId))
-            else:
-                log.debug("WebId {0} already exists. Generating a new one".format(wId))
-
-            wId = uuid.uuid4().hex
-
-        log.debug("New webId generated: {0}." .format(wId))
-
-        webOTT = secrets.generate_ott(options.OTTLength, self.application.server_secret.rng, "hex")
-
-        nowTime = Time.syncedNow()
-        expirePinPadTime = nowTime + datetime.timedelta(seconds=options.accessNumberExpireSeconds)
-        expireTime = expirePinPadTime + datetime.timedelta(seconds=options.accessNumberExtendValiditySeconds)
-
-        self.storage.add(stage="auth", expire_time=expireTime, webOTT=webOTT, wid=wId)
-
-        qrUrl = options.rpsBaseURL + "#" + wId
-        params = {
-            "ttlSeconds": options.accessNumberExpireSeconds,
-            "qrUrl": qrUrl,
-            "webOTT": webOTT,
-            "localTimeStart": Time.DateTimetoEpoch(nowTime),
-            "localTimeEnd": Time.DateTimetoEpoch(expirePinPadTime)
-        }
+        mobileFlow = MobileFlow(self.application, self.storage)
+        params = mobileFlow.generate_qr(mobileFlow.generate_wid())
 
         self.write(params)
         self.finish()
