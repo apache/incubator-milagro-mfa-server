@@ -1,4 +1,4 @@
-#!/usr/bin/en python
+#!/usr/bin/env python
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -130,6 +130,7 @@ define("setDeviceName", default=False, type=bool)
 # mobile client config
 define("mobileUseNative", default=False, type=bool)
 define("mobileConfig", default=None, type=list)
+define("mobileService", default=None, type=dict)
 define("useNFC", default=False, type=bool)
 define("serviceName", default="", type=unicode)
 define("serviceType", default="online", type=unicode)
@@ -144,6 +145,7 @@ DYNAMIC_OPTION_MAPPING = {
     'time_synchronization_period': 'timePeriod',
     'mobile_use_native': 'mobileUseNative',
     'mobile_client_config': 'mobileConfig',
+    'mobile_service': 'mobileService',
 }
 
 
@@ -858,15 +860,11 @@ class ServiceHandler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.engine
     def get(self):
-        params = {
-            "name": options.serviceName,
-            "url": options.rpsBaseURL,
-            "type": options.serviceType,
-            "rps_prefix": options.rpsPrefix,
-            "icon_url": options.serviceIconUrl,
-        }
-
-        self.write(params)
+        if options.mobileService:
+            params = str(options.mobileService)
+            self.write(params)
+        else:
+            self.set_status(403)
         self.finish()
 
 
