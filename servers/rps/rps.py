@@ -861,7 +861,7 @@ class ServiceHandler(BaseHandler):
     @tornado.gen.engine
     def get(self):
         if options.mobileService:
-            params = str(options.mobileService)
+            params = json.dumps(options.mobileService)
             self.write(params)
         else:
             self.set_status(403)
