@@ -36,7 +36,6 @@ function get_crypto {
     git clone https://github.com/miracl/milagro-crypto.git
 
     cd milagro-crypto || exit
-    git checkout tags/1.0.0
 }
 
 function build_crypto {
@@ -99,7 +98,7 @@ function configure_dta {
         esac
     fi
 
-    if [ $CONFIGURE ]
+    if [ $CONFIGURE == 1 ]
     then
         cp config_default.py config.py
         CONFIG_FILE=$(pwd)/config.py
@@ -125,7 +124,7 @@ function configure_rps {
     CONFIGURE=1
     if [ -f config.py ]
     then
-        echo "NOTE: Config file for DTA already exist"
+        echo "NOTE: Config file for RPS already exist"
         read -p "Do you want to override it (y/n)?" choice
         case "$choice" in 
           y|Y ) echo "yes"; CONFIGURE=1;;
@@ -134,7 +133,7 @@ function configure_rps {
         esac
     fi
 
-    if [ $CONFIGURE ]
+    if [ $CONFIGURE == 1 ]
     then
         cp config_default.py config.py
 
@@ -153,7 +152,7 @@ function configure_demo {
     CONFIGURE=1
     if [ -f config.py ]
     then
-        echo "NOTE: Config file for DTA already exist"
+        echo "NOTE: Config file for DEMO RPA already exist"
         read -p "Do you want to override it (y/n)?" choice
         case "$choice" in 
           y|Y ) echo "yes"; CONFIGURE=1;;
@@ -162,7 +161,7 @@ function configure_demo {
         esac
     fi
 
-    if [ $CONFIGURE ]
+    if [ $CONFIGURE == 1 ]
     then
         cp config_default.py config.py
 
