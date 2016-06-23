@@ -51,17 +51,6 @@ NOTE: While running the script if config file is already found for dta, rps or d
 
 Review the script for more details.
 
-###Part 0: Building the Milagro Crypto Libraries
-If you already have Milagro Crypto Libraries installed you can skip this step
-
-Clone the [_milagro-crypto_ repository](https://github.com/miracl/milagro-crypto) and checkout tag `1.0.0`.
-```
-> git clone https://github.com/miracl/milagro-crypto.git
-> git checkout tags/1.0.0
-```
-Follow the instructions for your platform from the milagro-crypto [README file](https://github.com/miracl/milagro-crypto/blob/master/README.md#build-instructions).
-
-
 ###Part 1: Installation
 Install all dependencies needed for the services to run.
 
