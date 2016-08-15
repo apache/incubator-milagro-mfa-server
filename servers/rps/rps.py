@@ -56,6 +56,8 @@ from dynamic_options import (
     process_dynamic_options,
 )
 
+from mobile_flow import MobileFlow
+
 if os.name == "posix":
     from mpDaemon import Daemon
 elif os.name == "nt":
@@ -99,7 +101,7 @@ define("seedValueLength", default=100, type=int)
 define("DTALocalURL", default="", type=unicode)
 
 # access number options
-define("accessNumberExpireSeconds", default=60, type=int)
+define("accessNumberExpireSeconds", default=300, type=int)
 define("accessNumberExtendValiditySeconds", default=5, type=int)
 define("accessNumberUseCheckSum", default=True, type=bool)
 
@@ -128,7 +130,11 @@ define("setDeviceName", default=False, type=bool)
 # mobile client config
 define("mobileUseNative", default=False, type=bool)
 define("mobileConfig", default=None, type=list)
+define("mobileService", default=None, type=dict)
 define("useNFC", default=False, type=bool)
+define("serviceName", default="", type=unicode)
+define("serviceType", default="online", type=unicode)
+define("serviceIconUrl", default="", type=unicode)
 
 
 # Mapping between local names of dynamic options and names from json
@@ -139,6 +145,7 @@ DYNAMIC_OPTION_MAPPING = {
     'time_synchronization_period': 'timePeriod',
     'mobile_use_native': 'mobileUseNative',
     'mobile_client_config': 'mobileConfig',
+    'mobile_service': 'mobileService',
 }
 
 
@@ -312,8 +319,12 @@ class ClientSettingsHandler(BaseHandler):
         }
 
         if not options.requestOTP:
-            params["accessNumberURL"] = "{0}/accessnumber".format(baseURL)
+            params["accessNumberURL"] = "{0}/access".format(baseURL)
             params["getAccessNumberURL"] = "{0}/getAccessNumber".format(baseURL)
+
+        if options.mobileUseNative:
+            params["getQrUrl"] = "{0}/getQrUrl".format(baseURL)
+            params["codeStatusURL"] = "{0}/codeStatus".format(baseURL)
 
         self.write(params)
         self.finish()
@@ -674,7 +685,7 @@ class RPSGetAccessNumberHandler(BaseHandler):
         # Generate request for MPinWIDServer for WID
         wId = secrets.generate_random_webid(self.application.server_secret.rng, options.accessNumberUseCheckSum)
 
-        while wId is None or (self.storage.find(stage="auth", webID=wId)):
+        while wId is None or (self.storage.find(stage="auth", wid=wId)):
             if wId is None:
                 log.debug("WebId is None".format(wId))
             else:
@@ -703,7 +714,18 @@ class RPSGetAccessNumberHandler(BaseHandler):
         self.finish()
 
 
-class RPSAccessNumberHandler(BaseHandler):
+class RPSGetQrUrlHandler(BaseHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def post(self):
+        mobileFlow = MobileFlow(self.application, self.storage)
+        params = mobileFlow.generate_qr(mobileFlow.generate_wid())
+
+        self.write(params)
+        self.finish()
+
+
+class RPSAccessHanler(BaseHandler):
     @tornado.web.asynchronous
     @tornado.gen.engine
     def post(self):
@@ -717,25 +739,10 @@ class RPSAccessNumberHandler(BaseHandler):
             self.finish()
             return
 
-        I = self.storage.find(stage="auth", webOTT=webOTT)
-        if not I:
-            log.debug("Cannot find webOTT: {0}".format(webOTT))
+        params = MobileFlow(self.application, self.storage).get_app_status(webOTT)
 
-            self.set_status(404)
-            self.finish()
-            return
-
-        authOTT = I.authOTT
-        if authOTT and (str(I.status) == "200"):
-            self.write({"authOTT": authOTT})
-            self.finish()
-        else:
-            if not authOTT:
-                log.debug("authOTT not set for webOTT: {0}".format(webOTT))
-            else:
-                log.debug("Auth status for webOTT: {0}: {1}".format(webOTT, I.status))
-            self.set_status(401)
-            self.finish()
+        self.write(params)
+        self.finish()
 
 
 class RPSAuthenticateHandler(BaseHandler):
@@ -846,6 +853,18 @@ class StatusHandler(BaseHandler):
         self.set_status(200, reason=reason)
         self.write({'version': VERSION, 'message': reason})
 
+        self.finish()
+
+
+class ServiceHandler(BaseHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def get(self):
+        if options.mobileService:
+            params = json.dumps(options.mobileService)
+            self.write(params)
+        else:
+            self.set_status(403)
         self.finish()
 
 
@@ -1493,6 +1512,34 @@ class MobileConfigHandler(BaseHandler):
             self.write(json.dumps(options.mobileConfig))
 
 
+class RPSCodeStatusHandler(BaseHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def post(self):
+        try:
+            data = json.loads(self.request.body)
+            data['status']
+        except ValueError:
+            log.error("Cannot decode body as JSON.")
+            log.debug(self.request.body)
+            self.set_status(400, reason="BAD REQUEST. INVALID JSON")
+            self.finish()
+            return
+        except KeyError:
+            log.error("Invalid JSON data structure")
+            log.debug(data)
+            self.set_status(400, reason="BAD REQUEST. INVALID DATA")
+            self.finish()
+            return
+
+        mobileFlow = MobileFlow(self.application, self.storage)
+        params = mobileFlow.update_app_status(data)
+
+        self.set_status(200, 'OK')
+        self.write(params)
+        self.finish()
+
+
 # MAIN
 class Application(tornado.web.Application):
     def __init__(self):
@@ -1503,8 +1550,10 @@ class Application(tornado.web.Application):
             (r"/{0}/signature/([0-9A-Fa-f]+)".format(rpsPrefix), RPSSignatureHandler),  # GET
             (r"/{0}/timePermit/([0-9A-Fa-f]+)".format(rpsPrefix), RPSTimePermitHandler),  # GET
             (r"/{0}/setupDone/([0-9A-Fa-f]+)".format(rpsPrefix), RPSSetupDoneHandler),  # POST
-            (r"/{0}/accessnumber".format(rpsPrefix), RPSAccessNumberHandler),  # POST
+            (r"/{0}/access".format(rpsPrefix), RPSAccessHanler),  # POST
             (r"/{0}/getAccessNumber".format(rpsPrefix), RPSGetAccessNumberHandler),  # POST
+            (r"/{0}/getQrUrl".format(rpsPrefix), RPSGetQrUrlHandler),  # POST
+            (r"/{0}/codeStatus".format(rpsPrefix), RPSCodeStatusHandler),  # POST
             (r"/{0}/clientSettings".format(rpsPrefix), ClientSettingsHandler),
             (r"/{0}/authenticate".format(rpsPrefix), RPSAuthenticateHandler),  # POST, for mobile login
             # Authentication
@@ -1518,6 +1567,7 @@ class Application(tornado.web.Application):
             (r"/loginResult", LoginResultHandler),  # POST
 
             (r"/status", StatusHandler),
+            (r"/service", ServiceHandler),  # GET
             (r"/dynamicOptions", DynamicOptionsHandler),  # POST, GET
             (r"/{0}/mobileConfig".format(rpsPrefix), MobileConfigHandler),  # GET
             (r"/(.*)", DefaultHandler),
