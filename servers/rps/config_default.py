@@ -109,15 +109,23 @@ RegisterForwardUserHeaders = ''
 LogoutURL = '/logout'
 
 """PIN pad client options"""
-# rpsBaseURL = ''
-# rpsPrefix = 'rps'  # Default
+# Need to specify the url where the RPS is accesable like: http://<address>:<port>
+rpsBaseURL = "http://%s:%s/" % (address, port)  # URL where RPS is accesable
+rpsPrefix = 'rps'  # Default
 # setDeviceName = True
 
 """Mobile client options"""
 # mobileUseNative = True # False by default
 serviceName = "Milagro MFA Demo"
-# serviceType = "online" # Default
-# serviceIconUrl = "http://example.com/icon.jpg"
+serviceType = "online"  # Default
+serviceIconUrl = "http://example.com/icon.jpg"
+mobileService = {
+   "name": serviceName,
+   "url": rpsBaseURL,
+   "rps_prefix": rpsPrefix,
+   "logo_url": serviceIconUrl,
+   "type": serviceType
+ }
 
 """Key value storage options"""
 storage = 'memory'
