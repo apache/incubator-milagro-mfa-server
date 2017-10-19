@@ -33,7 +33,7 @@ function get_crypto {
     echo "Get Milagro Crypto Libraries"
     mkdir -p install
     cd install || exit
-    git clone https://github.com/miracl/milagro-crypto.git
+    git clone https://github.com/apache/incubator-milagro-crypto.git milagro-crypto
 
     cd milagro-crypto || exit
 }

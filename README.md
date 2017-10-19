@@ -23,7 +23,7 @@ You can run it from `<milagro-mfa-server>` base directory like this
  > ./install.sh
 ```
 you can provide optional argument to the script <milagro-mfa-js-client-location> where this is an absolute path of
-the location `https://github.com/miracl/milagro-mfa-js-client` is downloaded.
+the location `https://github.com/apache/incubator-milagro-mfa-js-client` is downloaded.
 ```
  > ./install.sh <milagro-mfa-js-client-location>
 ```
@@ -70,11 +70,11 @@ NOTE: If install.sh script is used you can skip this step
 
 #### Building the Milagro Crypto Libraries
 
-Clone the [_milagro-crypto_ repository](https://github.com/miracl/milagro-crypto) 
+Clone the [_milagro-crypto_ repository](https://github.com/apache/incubator-milagro-crypto) 
 ```
-> git clone https://github.com/miracl/milagro-crypto.git
+> git clone https://github.com/apache/incubator-milagro-crypto.git milagro-crypto
 ``` 
-Follow the instructions for your platform from the milagro-crypto [README file](https://github.com/miracl/milagro-crypto/blob/master/README.md#build-instructions).
+Follow the instructions for your platform from the milagro-crypto [README file](https://github.com/apache/incubator-milagro-crypto/blob/master/README.md#build-instructions).
 
 #### Getting Credentials
 
