@@ -1,0 +1,353 @@
+syntax = "proto3";
+package milagro.rps;
+import "google/protobuf/timestamp.proto";
+import "mpin.proto";
+
+ enum ResultCode {
+    OK = 0;
+    REGISTRATION_STARTED = 1;
+ }
+
+
+message SetupState
+{
+    ResultCode status = 1;
+    google.protobuf.Timestamp expireTime = 2;
+    bytes mpinHex = 3;
+    bytes regOTT = 4;
+    bool active = 5;
+}
+message SetupRequest
+{ 
+   /*
+   * The encoded mpin hexadecimal value.
+   */
+   bytes mpinHex = 1;
+    /*
+    * User identifier 
+    */
+   string userId = 2;
+  /*
+   * Indicates (1 or 0) whether the flow is carried out 
+   * by the mobile client (1), or not (0).
+   */
+   bool mobile = 3;
+  /*
+  * (Optional) Depending on the server preferences, 
+  * the Client might provide a friendly name describing 
+  * the device from which the request is coming. 
+  * This name will be further forwarded to the RPA so it can attach it to 
+  * the end-user information that it stores.
+  */ 
+
+  /*
+  * Identifier of the device
+  */
+  bytes deviceId = 4;
+ /*
+  * In case an already started setup flow should be re-started, 
+  *  this should be the original <registration-ott> that was returned 
+  *  in the initial response.
+  * 
+  */
+  bytes regOtt = 5;
+  /*
+  * Optional user data to be associated with user. 
+  */ 
+  bytes userData = 6;
+};
+message SetupResponse
+{
+
+ ResultCode statusCode = 1;
+/**
+* Expiration time for the user setup to
+* in case the rps should wait for user verification
+* to be completed.
+*/
+ google.protobuf.Timestamp expireTime = 2;
+ /**
+ * Indicates if the useras been already made active
+ */
+ bool active = 3;
+ /**
+ * A reference number identifing the setup
+ * process for the given mpin. The number is valid
+ * until the flow is complete or expired and
+ * serves as a type of OTT.
+ */
+ bytes regOTT = 4;
+ /*
+ * The current system time.
+ */
+ google.protobuf.Timestamp nowTime = 5;
+ /*
+ * The coded mpin in hexadecimal.
+ */
+ bytes mpinHex = 6;
+}
+
+message UserRequest
+{
+    /*
+    * MPIN identifier to be provided
+    */
+    bytes mpinId = 1;
+  /* 
+  * The string identifying the end-user. 
+  *  It might be the end-user e-mail address or any other system-unique string.
+  */
+    string userId = 2;
+  /*
+  *
+  */
+  bool mobile = 3;
+  /*
+  * (Optional) Depending on the server preferences, 
+  * the Client might provide a friendly name describing 
+  * the device from which the request is coming. 
+  * This name will be further forwarded to the RPA so it can attach it to 
+  * the end-user information that it stores.
+  */ 
+
+   bytes deviceId = 4;
+   /*
+  * In case an already started setup flow should be re-started, 
+  *  this should be the original <registration-ott> that was returned 
+  *  in the initial response.
+  * 
+  */
+  bytes registrationOtt = 5;
+  /*
+  * Optional user data to be associated with user. 
+  */ 
+  bytes userData = 6;
+  bytes salt = 7;
+}
+
+
+message UserResponse
+{
+    google.protobuf.Timestamp expireTime = 1;
+    bool active = 2;
+    bytes regOTT = 3;
+    google.protobuf.Timestamp  nowTime =4;
+    bytes mpinId = 5;
+}
+message UserVerifyRequest
+{
+    bytes mpinIdHex = 1;
+    bytes activateKey = 2;
+}
+message UserVerifyResponse
+{
+    int32 statusCode = 1;
+}
+message MPinExchange1Request
+{
+   bytes mpinHex = 1;
+   bytes mpinU = 2;
+   bytes mpinUT = 3;
+}        
+message MPinExchange1Response
+{
+
+    int32 statusCode = 1;
+    uint32 pass = 2;
+    bytes y = 3;
+    string version = 4;    
+} 
+message MPinExchange2Request
+{
+  bytes v = 1;
+  uint32 pass = 2; 
+  bool mobile = 3;
+}
+message MPinExchange2Response
+{
+    int32 statusCode = 1;
+    uint32 pass = 2;
+    bytes authOTT = 3;
+    string version = 4;
+}
+message SignatureRequest 
+{
+/*
+* Reference OTT registration number
+* provided in response of Setup call.
+*/
+    bytes regOTT = 1;
+    bytes mpinHex = 2;
+}
+message SignatureResponse
+{
+    int32 appid = 1;
+    bytes clientSecret = 2;
+    bytes mpinHex = 3;
+    bytes hashmpin = 4;
+    google.protobuf.Timestamp expireTime = 5;
+    bytes signature = 6;
+}
+message StatusCodeResponse 
+{
+    int32 statusCode = 1;
+}
+
+message TimePermitResponse
+{
+    int32 statusCode = 1;
+    google.protobuf.Timestamp date = 2;
+    string message = 3;
+    string version = 4;
+    bytes timePermit = 5;
+    int32 storageId = 6;
+    bytes signature = 7;  
+}
+message AuthToken
+{
+    google.protobuf.Timestamp expires = 1; 
+    int32 pinError = 2;
+    int32 successCode = 3;
+    bytes mpinId = 4;
+    bool OTP = 5;
+    int32 pinErrorCost = 6;
+}
+message UpdateTokenRequest 
+{
+    AuthToken token = 1;
+    bytes authOTT = 2;
+    bytes signature =3;
+}
+message AuthenticationRequest
+{   
+    bytes authOTT = 1;
+}
+message AuthenticationResponse
+{
+    int32 status = 1;
+    string message = 2;
+    string userId = 3;
+    bytes mpinId= 4;
+}
+message MobileLoginRequest 
+{
+ // return success if the RPA doenst ban the user.
+ bytes authOTT = 2;
+ string logoutURL = 3;
+ bytes logoutData = 4;
+} 
+message MobileLoginResponse
+{
+    // return success if the RPA doenst ban the user.
+    int32 status = 1;
+
+}
+
+message MobileAccessNumberRequest 
+{
+ // return success if the RPA doenst ban the user. 
+} 
+message MobileAccessNumberResponse
+{
+    int32 status = 1;    
+    int64 localTimeStart = 2;
+    int32 ttlSeconds = 3;
+    int64 localTimeEnd = 4;
+    bytes webOTT = 5;
+    int64 accessNumber = 6;
+}
+message MobileAuthenticateRequest
+{
+    bytes authOTT = 1;
+    string version = 2;
+    string type = 3;
+}
+message MobileAuthenticateResponse
+{
+    int32 statusCode = 1;
+}
+
+message MPinHex
+{
+    int32 statusCode = 1;
+    bytes mpinHex = 2;
+};
+// The RPS service definition.
+service RpsService {
+
+    /*
+     * This request is made 
+     * The purpose of the setup is the following:
+     * 1. Verify user identity
+     * 2. Get the two shares of the pin permit and combine them
+     * 3. Extract the user pin code from the client secret to form
+     * MPIN Token
+     * 4. Store the MPIN Token on the client machine.
+     * 5. This request is made by the Client (through a proxy)
+     * to initiate the Setup flow for an end-user, or to restart it.
+     * 6. When the flow is initially started,
+     * the request is made without the optional /<mpin-id>.
+     * In this case the RPS generates a new <mpin-id>
+     * which is returned in the response data.
+     * The <mpin-id> is a hex-encoded JSON structure
+     */
+
+     rpc Setup(SetupRequest) returns (SetupResponse) {}
+
+  /*
+  * The client signal that the setup has been done to the server.
+  * RPS does nothing.
+  */
+  rpc SetupDone(MPinHex) returns (StatusCodeResponse) {}
+  /**
+  * This request is made by the Client (through a proxy) and serves several purposes:
+
+    1. To obtain the server share of the Time Permit. As part of this request the RPS will get the Time Permit share from the server D-TA and will return it in the response.
+    2. To obtain the parameters that should be used to request the cloud share of the Time Permit. Those parameters include a unique signature without which the cloud-hosted D-TA will not fulfill the request.
+    3. To generate obfuscated (hashed) M-Pin ID, which is further used by the cloud-hosted services to identify the end-user.
+
+  */
+  rpc GetSignature(SignatureRequest) returns (SignatureResponse){}
+  
+  /*
+  *
+  * This request is made by the Client (through a proxy) to obtain the server share of the Time Permit for the given <mpin-id>. The RPS makes a request to the server-hosted D-TA Service 
+  * to obtain the Time Permit Share and returns the result to the Client. 
+  * Prior to sending the request to the D-TA, 
+  * the RPS will make a GET /permitUser?mpin_id= request to the RPA, 
+  * which might revoke the access to the service for the specified user. 
+  * The RPA should respond with 200 OK, if the RPS should proceed 
+  *  with the time permit request, or with 403 if the user is revoked. 
+  * The actual RPA endpoint for theGET /permitUser request is configurable. 
+  * If it is not configured, the RPS will not make 
+  * this request and will assume that no user should be revoked by the RPA. 
+  * Additional purpose of this request is to provide the Client with the current date and the location of the cache storage for cloud share of the Time Permit. The Client should use 
+  * those in order to check whether the cloud TP share is stored locally,
+  *  or on the cache storage, or it should be requested from the cloud-hosted D-TA. 
+  * As part of this request the RPS will also generate and return in the response a unique signature which should further be used in the request 
+  * for the second Time Permit Share from the cloud-hosted D-TA Service.
+  */
+  rpc GetTimePermit(MPinHex) returns (TimePermitResponse) {}
+  
+  
+  /*
+  *  This request is maed by the mfa server as a resiult of an authentication 
+  *  attempt. The server passes a token which indicates whether the auteation is 
+  *  successful or not as well a reference number fot hre authentication attempt.
+  *  This reference number is also provided to the client, which it will use it 
+  *  in the AuthenticationRequest. 
+  */
+  rpc UpdateToken(UpdateTokenRequest) returns(StatusCodeResponse) {}
+
+  /*
+  * The request is made by the rpa to validate the successful authentication for 
+  * an end user. The RPA should provide the authentication reference number OTT
+  * in order to the RPS validate the authentication.
+  */
+  rpc NewAutentication(AuthenticationRequest) returns (AuthenticationResponse) {}
+ 
+ /** First pass of the autentication protocol */
+  rpc MPinExchange1 (MPinExchange1Request) returns (MPinExchange1Response) {}
+  rpc MPinExchange2 (MPinExchange2Request) returns (MPinExchange2Response) {}
+ 
+}

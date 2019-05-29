@@ -1,0 +1,82 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+import "mpin.proto";
+package milagro.dta;
+
+enum ResultCode 
+{
+    SUCCESS = 0;
+    PROTOCOL_ERROR = 1;
+    INVALID_SIGNATURE = 2;
+    KEY_GENERATION_FAILED = 3;
+}
+message AuthClientSecretRequest
+{
+    int32 appId = 1;
+    google.protobuf.Timestamp expireTime = 2;
+    bytes mpinIdHexEncoded = 3;
+    bytes hashUserId = 4;
+    bytes hmacSignature = 5;
+    bool mobile = 6;
+}
+message AuthServerSecretRequest
+{
+    ResultCode statusCode = 1;
+    int32 appId = 2;
+    google.protobuf.Timestamp expireTime = 3;
+    bytes hmacSignature = 4;
+}
+message AuthServerResponse
+{
+   int32 statusCode = 1;
+   string responseMessage = 2;
+   bytes secret = 3;
+   google.protobuf.Timestamp time=4;
+   bytes hmacSignature = 5;
+}
+message TimePermitsRequest
+{
+    int32 appId = 1;
+    bytes mpinIdHexEncoded = 2;
+    bytes hmacSignature = 3;
+    int32 count = 4;
+}
+message TimePermitRequest
+{
+    int32 appId = 1;
+    bytes mpinIdHexEncoded = 2;
+    bytes hmacSignature = 3;
+}
+
+message TimePermitsResponse
+{
+    ResultCode statusCode = 1;
+    repeated bytes timePermit =2;
+}
+
+message TimePermitResponse
+{
+    ResultCode statusCode = 1;
+    bytes timePermit =2;
+}
+message StatusRequest
+{
+    int32 appId = 1;
+    bytes hmacSignature = 2;
+}       
+message StatusResponse
+{
+    ResultCode statusCode = 1;
+    google.protobuf.Timestamp startTime = 2;
+    string serviceName =3; 
+}
+
+// The dta service definition.
+service DtaService {
+  // Sends a greeting
+  rpc GetClientSecret (AuthClientSecretRequest) returns (AuthServerResponse) {}
+  rpc GetServerSecret (AuthServerSecretRequest) returns (AuthServerResponse) {}
+  rpc GetStatus(StatusRequest) returns (StatusResponse) {}
+  rpc GetTimePermit(TimePermitRequest) returns (TimePermitResponse) {}
+  rpc GetTimePermits(TimePermitsRequest) returns (TimePermitsResponse) {}
+}
