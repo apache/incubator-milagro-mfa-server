@@ -6,6 +6,6 @@ use catch.h that it is placed in the include directory.
 
 _____
 
-Experimental support for conan package manager has been provided through the conan.run. Conan is dependency manager for C++.
+Experimental support for conan package manager has been provided through the conan.run. Conan is dependency manager for C++. On Ubuntu you have to create a directory /opt/conan
 
 

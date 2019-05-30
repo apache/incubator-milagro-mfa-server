@@ -1,4 +1,6 @@
 [requires]
 boost/1.70.0@conan/stable
+grpc/1.20.0@inexorgame/stable
+protobuf/3.5.1@bincrafters/stable 
 [generators]
  cmake
