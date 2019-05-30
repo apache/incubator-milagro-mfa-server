@@ -1,0 +1,11 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+message MPinIdentifier 
+{
+   int32 appid = 1;
+   google.protobuf.Timestamp issued = 2;
+   string userid = 3;
+   bytes salt = 4;
+   bytes activatekey = 5;
+   bytes regott = 6;
+}

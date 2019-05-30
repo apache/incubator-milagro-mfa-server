@@ -1,0 +1,63 @@
+syntax = "proto3";
+package milagro.rpa;
+
+import "google/protobuf/timestamp.proto";
+import "mpin.proto";
+
+message VerifyRequest
+{
+    bytes activateKey = 1;
+    bytes mpinId = 2;
+    bool mobile = 3;
+    string userId = 4;
+    google.protobuf.Timestamp expireTime = 5;
+    bool resend = 6;
+    bytes userData = 7;
+}
+message VerifyResponse
+{
+   int32 status = 1;
+   bool forceActivate = 2;
+}
+message AuthenticateRequest
+{
+    bytes authOTT = 1;
+    string version = 2;
+    string type = 3;   
+}
+message AuthenticateResponse
+{ 
+    int32 status = 1;
+    string message = 2;
+    string userId = 3;
+    bytes mpinId= 4;
+}
+message PermitRequest 
+{
+   bytes mpinId = 1;
+}
+message PermitResponse 
+{
+    int32 status = 2;
+}
+
+/*
+* The RPA is the only part in the system that is strictly specific to each server instance and i
+*   implements the logic of the specific Web Application. 
+*   In order for this Web Application to serve as RPA, 
+*   it should implement the below RESTful endpoints. 
+*   Note that the actual URL's for the endpoints are customizable, 
+*   and therefore example endpoint names are shown in the brackets. 
+*   The actual endpoint URLs should be configured in the RPS.
+*/
+// The RPS service definition.
+service RpaService {
+
+    /*
+  *  This request is made by the RPA when the end-user identity verification 
+  *  is complete.
+  */
+ rpc Verify(VerifyRequest) returns (VerifyResponse) {}
+ rpc Permit(PermitRequest) returns (PermitResponse) {}
+ rpc Authentication (AuthenticateRequest) returns (AuthenticateResponse) {}
+}
